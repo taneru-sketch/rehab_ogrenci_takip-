@@ -1,0 +1,41 @@
+name: Android APK Derleme (Release)
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Kodu Klonla
+        uses: actions/checkout@v4
+
+      - name: Java JDK 17 Kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Flutter SDK Kur
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.x'
+          channel: 'stable'
+          cache: true
+
+      - name: Paketleri Indir (pub get)
+        run: flutter pub get
+
+      - name: Release APK Derle
+        run: flutter build apk --release
+
+      - name: APK Dosyasini Indirilebilir Yap (Artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: RehberOzel-Release-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
