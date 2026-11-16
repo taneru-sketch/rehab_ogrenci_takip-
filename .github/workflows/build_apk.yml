@@ -28,14 +28,6 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Standart Android Dosyalarini Onar
-        run: |
-          flutter create --org com.rehab --project-name rehab_ogrenci_takip .
-
-      - name: AdMob App ID Eklesi Yap
-        run: |
-          sed -i '/<application/a \        <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-3940256099942544~3347511713"/>' android/app/src/main/AndroidManifest.xml
-
       - name: Paketleri Indir (pub get)
         run: flutter pub get
 
