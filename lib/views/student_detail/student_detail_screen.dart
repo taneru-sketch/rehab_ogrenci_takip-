@@ -5,6 +5,7 @@ import '../../models/student_model.dart';
 import '../../services/app_state.dart';
 import '../../widgets/ad_banner_widget.dart';
 import '../admin/student_form_screen.dart';
+import '../mail/mail_form_screen.dart';
 import 'add_note_dialog.dart';
 
 class StudentDetailScreen extends StatelessWidget {
@@ -92,17 +93,41 @@ class StudentDetailScreen extends StatelessWidget {
           const AdBannerWidget(),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          showDialog(
-            context: context,
-            builder: (_) => AddNoteDialog(studentId: student.id),
-          );
-        },
-        icon: const Icon(Icons.add_comment_rounded),
-        label: const Text('Seans Notu Ekle'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          // Mail Gönder
+          FloatingActionButton.small(
+            heroTag: 'mail_fab',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => MailFormScreen(studentName: student.fullName),
+                ),
+              );
+            },
+            backgroundColor: Colors.teal,
+            foregroundColor: Colors.white,
+            tooltip: 'Mail Gonder',
+            child: const Icon(Icons.email_rounded),
+          ),
+          const SizedBox(height: 10),
+          // Seans Notu Ekle
+          FloatingActionButton.extended(
+            heroTag: 'note_fab',
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (_) => AddNoteDialog(studentId: student.id),
+              );
+            },
+            icon: const Icon(Icons.add_comment_rounded),
+            label: const Text('Seans Notu Ekle'),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            foregroundColor: Colors.white,
+          ),
+        ],
       ),
     );
   }
