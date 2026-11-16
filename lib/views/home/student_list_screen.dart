@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../models/student_model.dart';
 import '../../services/app_state.dart';
+import '../../theme/app_colors.dart';
 import '../../widgets/ad_banner_widget.dart';
 import '../admin/admin_settings_screen.dart';
 import '../admin/student_form_screen.dart';
@@ -14,348 +17,358 @@ class StudentListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
-    final theme = Theme.of(context);
     final students = appState.filteredStudents;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9),
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              appState.institution.institutionName,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF0F172A),
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            Row(
-              children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: appState.isAdmin
-                        ? Colors.amber.shade100
-                        : Colors.green.shade100,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    appState.isAdmin ? 'Yonetici (Admin)' : 'Egitimci Modu',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: appState.isAdmin
-                          ? Colors.amber.shade900
-                          : Colors.green.shade900,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  'Kod: ${appState.institution.institutionCode}',
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-                ),
-              ],
-            ),
-          ],
-        ),
-        actions: [
-          if (appState.isAdmin)
-            IconButton(
-              icon: const Icon(Icons.settings_outlined, color: Colors.blueGrey),
-              tooltip: 'Kurum & Sifre Ayarlari',
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const AdminSettingsScreen(),
-                  ),
-                );
-              },
-            ),
-          IconButton(
-            icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
-            tooltip: 'Cikis Yap',
-            onPressed: () {
-              appState.logout();
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-              );
-            },
-          ),
-        ],
-      ),
+      backgroundColor: AppColors.background,
       body: Column(
         children: [
-          // Arama & Filtreleme Barı
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-            child: Column(
-              children: [
-                TextField(
-                  onChanged: (val) => appState.setSearchQuery(val),
-                  decoration: InputDecoration(
-                    hintText: 'Ogrenci adi veya tani ara (Orn: Ali, Otizm)...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    filled: true,
-                    fillColor: const Color(0xFFF8FAFC),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _buildFilterChip(context, 'Tumu'),
-                      _buildFilterChip(context, 'Seker Hassasiyeti'),
-                      _buildFilterChip(context, 'Tuvalet Desteği'),
-                      _buildFilterChip(context, 'Okula Gidenler'),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+          // Gradient Header
+          _buildHeader(context, appState),
+
+          // Arama & Filtreler
+          _buildSearchAndFilters(context, appState),
 
           // Öğrenci Listesi
           Expanded(
             child: students.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.search_off_rounded,
-                            size: 64, color: Colors.grey.shade400),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Eslesen ogrenci bulunamadi.',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
+                ? _buildEmptyState()
                 : ListView.builder(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                     itemCount: students.length,
                     itemBuilder: (context, index) {
-                      final student = students[index];
-                      return _buildStudentCard(context, student, appState);
+                      return _buildStudentCard(context, students[index], index)
+                          .animate(delay: (index * 60).ms)
+                          .fadeIn()
+                          .slideY(begin: 0.2, end: 0, curve: Curves.easeOut);
                     },
                   ),
           ),
 
-          // Sabit Google Ads Reklam Alanı
+          // AdMob
           const AdBannerWidget(),
         ],
       ),
       floatingActionButton: appState.isAdmin
           ? FloatingActionButton.extended(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const StudentFormScreen(),
-                  ),
-                );
-              },
-              backgroundColor: theme.colorScheme.primary,
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const StudentFormScreen()),
+              ),
+              backgroundColor: AppColors.accent,
               foregroundColor: Colors.white,
-              icon: const Icon(Icons.person_add_rounded),
-              label: const Text('Yeni Ogrenci'),
+              icon: const Text('➕', style: TextStyle(fontSize: 18)),
+              label: Text(
+                'Yeni Öğrenci',
+                style: GoogleFonts.nunito(fontWeight: FontWeight.w700),
+              ),
+              elevation: 4,
             )
           : null,
     );
   }
 
-  Widget _buildFilterChip(BuildContext context, String filterName) {
-    final appState = Provider.of<AppState>(context);
-    final isSelected = appState.selectedFilter == filterName;
-
-    return Padding(
-      padding: const EdgeInsets.only(right: 6),
-      child: FilterChip(
-        label: Text(filterName),
-        selected: isSelected,
-        onSelected: (_) => appState.setSelectedFilter(filterName),
-        selectedColor: Theme.of(context).colorScheme.primaryContainer,
-        labelStyle: TextStyle(
-          fontSize: 12,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          color: isSelected
-              ? Theme.of(context).colorScheme.primary
-              : Colors.grey.shade700,
+  Widget _buildHeader(BuildContext context, AppState appState) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: AppColors.primaryGradient,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(28),
+          bottomRight: Radius.circular(28),
         ),
-        backgroundColor: Colors.grey.shade100,
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 12, 20),
+          child: Row(
+            children: [
+              const Text('🌟', style: TextStyle(fontSize: 28)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      appState.institution.institutionName,
+                      style: GoogleFonts.nunito(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        appState.isAdmin ? '👑 Yönetici Modu' : '👩‍🏫 Eğitimci Modu',
+                        style: GoogleFonts.nunito(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (appState.isAdmin)
+                IconButton(
+                  icon: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Text('⚙️', style: TextStyle(fontSize: 18)),
+                  ),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const AdminSettingsScreen()),
+                  ),
+                ),
+              IconButton(
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Text('🚪', style: TextStyle(fontSize: 18)),
+                ),
+                onPressed: () {
+                  appState.logout();
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildStudentCard(
-      BuildContext context, Student student, AppState appState) {
-    final lastNote =
-        student.notes.isNotEmpty ? student.notes.first : null;
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => StudentDetailScreen(studentId: student.id),
+  Widget _buildSearchAndFilters(BuildContext context, AppState appState) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Column(
+        children: [
+          // Arama
+          TextField(
+            onChanged: appState.setSearchQuery,
+            decoration: InputDecoration(
+              hintText: '🔍  Öğrenci adı veya tanı ara...',
+              hintStyle: GoogleFonts.nunito(fontSize: 14, color: Colors.grey.shade400),
+              prefixIcon: null,
+              suffixIcon: appState.searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear_rounded, size: 18),
+                      onPressed: () => appState.setSearchQuery(''),
+                    )
+                  : null,
             ),
-          );
-        },
+          ),
+          const SizedBox(height: 10),
+          // Filtre Chipleri
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _filterChip(context, appState, 'Tümü', '📋'),
+                _filterChip(context, appState, 'Şeker Hassasiyeti', '🍬'),
+                _filterChip(context, appState, 'Tuvalet Desteği', '🚻'),
+                _filterChip(context, appState, 'Okula Gidenler', '🏫'),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _filterChip(BuildContext context, AppState appState, String label, String emoji) {
+    final isSelected = appState.selectedFilter == label;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: GestureDetector(
+        onTap: () => appState.setSelectedFilter(label),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.primary : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isSelected ? AppColors.primary : const Color(0xFFE5E0FF),
+              width: 1.5,
+            ),
+            boxShadow: isSelected
+                ? [BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 2))]
+                : [],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(emoji, style: const TextStyle(fontSize: 14)),
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: GoogleFonts.nunito(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: isSelected ? Colors.white : Colors.grey.shade700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStudentCard(BuildContext context, Student student, int index) {
+    final avatarColor = AppColors.avatarColors[index % AppColors.avatarColors.length];
+
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => StudentDetailScreen(studentId: student.id)),
+      ),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Üst Satır: Avatar + İsim + Tanı + Yaş
+              // Üst: Avatar + Bilgiler
               Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  CircleAvatar(
-                    radius: 24,
-                    backgroundColor: Colors.blue.shade100,
-                    child: Text(
-                      student.fullName.isNotEmpty
-                          ? student.fullName.substring(0, 1).toUpperCase()
-                          : '?',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue.shade800,
+                  // Renkli Gradient Avatar
+                  Container(
+                    width: 54,
+                    height: 54,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [avatarColor, avatarColor.withOpacity(0.7)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: avatarColor.withOpacity(0.35),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Text(
+                        student.fullName.isNotEmpty
+                            ? student.fullName.substring(0, 1).toUpperCase()
+                            : '?',
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           student.fullName,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF0F172A),
+                          style: GoogleFonts.nunito(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF1E1B4B),
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '${student.age} Yas • ${student.diagnosis}',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey.shade600,
+                          '${student.age} yaş  •  ${student.diagnosis}',
+                          style: GoogleFonts.nunito(
+                            fontSize: 12,
+                            color: Colors.grey.shade500,
+                            fontWeight: FontWeight.w600,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
                   ),
-                  const Icon(Icons.arrow_forward_ios_rounded,
-                      size: 16, color: Colors.blueGrey),
-                ],
-              ),
-              const SizedBox(height: 10),
-
-              // Kritik Hızlı Bilgi Etiketleri (Öğretmenin 2 saniyede görmesi gereken durumlar)
-              Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                children: [
-                  // Şeker Uyarısı
-                  if (student.health.hasSugarRestriction)
-                    _buildStatusBadge(
-                      label: '🚨 Seker Yasak/Hassas',
-                      bgColor: Colors.red.shade50,
-                      textColor: Colors.red.shade800,
-                      borderColor: Colors.red.shade200,
-                    ),
-
-                  // Tuvalet Durumu
-                  if (student.toilet.status == ToiletStatus.diaper)
-                    _buildStatusBadge(
-                      label: '🚻 Bez Kullaniyor',
-                      bgColor: Colors.blue.shade50,
-                      textColor: Colors.blue.shade800,
-                      borderColor: Colors.blue.shade200,
-                    )
-                  else if (student.toilet.status == ToiletStatus.withAssistance)
-                    _buildStatusBadge(
-                      label: '🚻 Destekle / Hatirlatmali',
-                      bgColor: Colors.orange.shade50,
-                      textColor: Colors.orange.shade800,
-                      borderColor: Colors.orange.shade200,
-                    ),
-
-                  // İlaç Takibi
-                  if (student.health.medications.isNotEmpty)
-                    _buildStatusBadge(
-                      label: '💊 Ilac Listesi Var',
-                      bgColor: Colors.teal.shade50,
-                      textColor: Colors.teal.shade800,
-                      borderColor: Colors.teal.shade200,
-                    ),
-
-                  // Okul Durumu
-                  if (student.school.attendsSchool)
-                    _buildStatusBadge(
-                      label: '🏫 Okula Gidiyor',
-                      bgColor: Colors.purple.shade50,
-                      textColor: Colors.purple.shade800,
-                      borderColor: Colors.purple.shade200,
-                    ),
+                  Icon(Icons.chevron_right_rounded, color: Colors.grey.shade300, size: 26),
                 ],
               ),
 
-              // Son Eklenen Not Önizlemesi
-              if (lastNote != null) ...[
+              // Kritik Durum Rozetleri
+              if (student.health.hasSugarRestriction ||
+                  student.toilet.status != ToiletStatus.independent ||
+                  student.health.medications.isNotEmpty ||
+                  student.school.attendsSchool) ...[
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 5,
+                  children: [
+                    if (student.health.hasSugarRestriction)
+                      _badge('🍬 Şeker Yasak!', const Color(0xFFFF6B6B), const Color(0xFFFFF1F2)),
+                    if (student.toilet.status == ToiletStatus.diaper)
+                      _badge('🚼 Bez Kullanıyor', const Color(0xFF38BDF8), const Color(0xFFE0F2FE)),
+                    if (student.toilet.status == ToiletStatus.withAssistance)
+                      _badge('🚻 Destekle', const Color(0xFFF59E0B), const Color(0xFFFFFBEB)),
+                    if (student.health.medications.isNotEmpty)
+                      _badge('💊 İlaç Takibi', const Color(0xFF10B981), const Color(0xFFECFDF5)),
+                    if (student.school.attendsSchool)
+                      _badge('🏫 Okula Gidiyor', AppColors.primary, AppColors.surfaceLight),
+                  ],
+                ),
+              ],
+
+              // Son Not
+              if (student.notes.isNotEmpty) ...[
                 const SizedBox(height: 10),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey.shade200),
+                    color: const Color(0xFFF9F7FF),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.speaker_notes_outlined,
-                          size: 15, color: Colors.blueGrey.shade400),
+                      const Text('📝', style: TextStyle(fontSize: 13)),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          '${lastNote.authorName}: "${lastNote.note}"',
+                          '${student.notes.first.authorName}: "${student.notes.first.note}"',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
+                          style: GoogleFonts.nunito(
                             fontSize: 12,
-                            color: Colors.blueGrey.shade700,
+                            color: Colors.grey.shade600,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
@@ -370,26 +383,43 @@ class StudentListScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusBadge({
-    required String label,
-    required Color bgColor,
-    required Color textColor,
-    required Color borderColor,
-  }) {
+  Widget _badge(String label, Color textColor, Color bgColor) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: borderColor, width: 0.8),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: textColor.withOpacity(0.3), width: 1),
       ),
       child: Text(
         label,
-        style: TextStyle(
+        style: GoogleFonts.nunito(
           fontSize: 11,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
           color: textColor,
         ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text('🔍', style: TextStyle(fontSize: 64))
+              .animate(onPlay: (c) => c.repeat())
+              .shimmer(duration: 2000.ms),
+          const SizedBox(height: 16),
+          Text(
+            'Eşleşen öğrenci bulunamadı.',
+            style: GoogleFonts.nunito(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Colors.grey.shade500,
+            ),
+          ),
+        ],
       ),
     );
   }
